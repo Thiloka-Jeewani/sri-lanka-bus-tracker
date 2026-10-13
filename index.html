@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f8f4">
+    <meta name="description" content="A community-built bus tracking prototype for Sri Lanka.">
+    <title>SL Bus.lk — Sri Lanka bus tracker</title>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://tile.openstreetmap.org">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="SL Bus.lk home">
+          <span class="brand-mark" aria-hidden="true">B</span>
+          <span>bus<span class="brand-accent">.lk</span></span>
+        </a>
+        <div class="topbar-right">
+          <span class="network-status"><span class="status-dot"></span><span data-i18n="connected">Connected</span></span>
+          <label class="language-picker">
+            <span class="sr-only" data-i18n="language">Language</span>
+            <select id="language-select" aria-label="Language">
+              <option value="en">English</option>
+              <option value="si">සිංහල</option>
+              <option value="ta">தமிழ்</option>
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <aside class="sidebar">
+          <div class="intro">
+            <p class="eyebrow" data-i18n="community">COMMUNITY TRANSIT</p>
+            <h1 data-i18n="headline">Your bus.<br>Not a guess.</h1>
+            <p class="intro-copy" data-i18n="intro">See community-shared bus locations and spend less time waiting.</p>
+          </div>
+
+          <section class="route-section" aria-labelledby="route-heading">
+            <div class="section-heading">
+              <h2 id="route-heading" data-i18n="routes">Routes</h2>
+              <span class="count-badge" id="route-count">—</span>
+            </div>
+            <div id="route-list" class="route-list" aria-live="polite"></div>
+          </section>
+
+          <section class="live-card" aria-labelledby="live-heading">
+            <div class="live-card-head">
+              <div>
+                <p class="eyebrow" data-i18n="live">LIVE NETWORK</p>
+                <h2 id="live-heading"><span id="vehicle-count">0</span> <span data-i18n="buses-sharing">buses sharing</span></h2>
+              </div>
+              <span class="live-indicator"><span></span><span data-i18n="live">LIVE</span></span>
+            </div>
+            <p id="empty-state" class="empty-state" data-i18n="empty">No buses are sharing their location yet. Invite a driver to get started.</p>
+            <ul id="vehicle-list" class="vehicle-list" aria-live="polite"></ul>
+          </section>
+
+          <section class="account-panel" aria-labelledby="account-heading">
+            <div class="account-heading">
+              <span class="driver-icon" aria-hidden="true">♙</span>
+              <div><h2 id="account-heading" data-i18n="accounts">Accounts</h2><p id="auth-status" role="status">Sign in or create an account</p></div>
+            </div>
+            <div id="auth-forms">
+              <form id="login-form">
+                <h3 data-i18n="sign-in">Sign in</h3>
+                <label for="login-email" data-i18n="email">Email</label>
+                <input id="login-email" name="email" type="email" autocomplete="username" required>
+                <label for="login-password" data-i18n="password">Password</label>
+                <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+                <button class="share-button" type="submit" data-i18n="sign-in">Sign in</button>
+              </form>
+              <details id="admin-setup" class="register-details" hidden>
+                <summary data-i18n="admin-setup-title">Set up the first administrator</summary>
+                <p class="privacy-note" data-i18n="admin-setup-note">One-time setup on this computer. Create and securely save your admin email and password.</p>
+                <form id="admin-setup-form">
+                  <label for="admin-setup-name" data-i18n="full-name">Full name</label>
+                  <input id="admin-setup-name" name="name" maxlength="80" autocomplete="name" required>
+                  <label for="admin-setup-email" data-i18n="email">Admin email</label>
+                  <input id="admin-setup-email" name="email" type="email" autocomplete="email" required>
+                  <label for="admin-setup-password" data-i18n="admin-password">Admin password (16+ characters)</label>
+                  <input id="admin-setup-password" name="password" type="password" minlength="16" maxlength="128" autocomplete="new-password" required>
+                  <button class="share-button" type="submit" data-i18n="create-admin">Create admin and open dashboard</button>
+                </form>
+              </details>
+              <details class="register-details">
+                <summary data-i18n="create-account">Create an account</summary>
+                <form id="register-form">
+                  <label for="register-name" data-i18n="full-name">Full name</label>
+                  <input id="register-name" name="name" maxlength="80" autocomplete="name" required>
+                  <label for="register-email" data-i18n="email">Email</label>
+                  <input id="register-email" name="email" type="email" autocomplete="email" required>
+                  <label for="register-password" data-i18n="password">Password</label>
+                  <input id="register-password" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required>
+                  <label for="register-role" data-i18n="account-type">Account type</label>
+                  <select id="register-role" name="role" required>
+                    <option value="passenger" data-i18n="role-passenger">Passenger</option>
+                    <option value="driver" data-i18n="role-driver">Bus driver</option>
+                    <option value="operator" data-i18n="role-operator">Bus operator</option>
+                    <option value="authority" data-i18n="role-authority">Transport authority</option>
+                  </select>
+                  <div id="organization-field" hidden>
+                    <label for="register-organization" data-i18n="organization">Organization / agency</label>
+                    <input id="register-organization" name="organization" maxlength="120">
+                  </div>
+                  <label class="consent-label"><input id="register-consent" name="consent" type="checkbox" required><span data-i18n="account-consent">I understand that GPS is collected only while a driver has explicitly started sharing and can be stopped at any time.</span></label>
+                  <button class="share-button" type="submit" data-i18n="register">Register</button>
+                </form>
+              </details>
+            </div>
+            <div id="account-session" hidden>
+              <p id="account-identity" class="account-identity"></p>
+              <div id="role-dashboard"></div>
+              <a id="admin-dashboard-link" class="admin-dashboard-link" href="/admin" hidden>Open admin dashboard <span aria-hidden="true">→</span></a>
+              <button class="secondary-button" id="logout-button" type="button" data-i18n="sign-out">Sign out</button>
+            </div>
+            <p id="auth-message" class="driver-message" role="status" aria-live="polite"></p>
+          </section>
+
+          <details class="driver-panel" id="driver-panel">
+            <summary>
+              <span class="driver-icon" aria-hidden="true">↗</span>
+              <span><strong data-i18n="driver-title">I'm driving a bus</strong><small data-i18n="driver-subtitle">Share your location with passengers</small></span>
+              <span class="summary-arrow" aria-hidden="true">⌄</span>
+            </summary>
+            <form id="driver-form">
+              <p id="driver-assignment" class="privacy-note">Sign in and ask your operator to assign you a registered vehicle.</p>
+              <input id="vehicle-id" name="vehicleId" type="hidden">
+              <select id="driver-route" name="routeId" hidden></select>
+              <p class="privacy-note" data-i18n="privacy">Your location is shared only while you have sharing turned on. Stop sharing at any time.</p>
+              <button class="share-button" id="share-button" type="button" data-i18n="start-sharing">Start sharing location</button>
+              <p id="driver-message" class="driver-message" role="status" aria-live="polite"></p>
+            </form>
+          </details>
+
+          <p class="prototype-note"><span aria-hidden="true">ⓘ</span> <span data-i18n="prototype-note">Prototype: routes and locations depend on community contributions.</span></p>
+        </aside>
+
+        <section class="map-panel" aria-label="Live bus map">
+          <div class="map-toolbar">
+            <div class="map-title">
+              <span class="map-pin" aria-hidden="true">⌖</span>
+              <div><strong data-i18n="map-title">Colombo, Sri Lanka</strong><small data-i18n="map-subtitle">Community bus network</small></div>
+            </div>
+            <button class="locate-button" id="locate-button" type="button" title="Center map on Colombo" aria-label="Center map on Colombo">◎</button>
+          </div>
+          <div id="map" role="application" aria-label="Map showing routes and shared bus locations"></div>
+          <div class="map-legend"><span><i class="legend-live"></i><span data-i18n="legend-live">Sharing now</span></span><span><i class="legend-stale"></i><span data-i18n="legend-stale">Last seen</span></span></div>
+          <div id="map-error" class="map-error" role="status" hidden></div>
+          <p class="map-attribution">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors</p>
+        </section>
+      </main>
+
+      <footer class="footer"><span data-i18n="footer">Built for people who ride.</span><span>·</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" data-i18n="map-data">Map data © OpenStreetMap</a></footer>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

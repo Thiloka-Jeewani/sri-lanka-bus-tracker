@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f8f4">
+    <meta name="description" content="Bus.lk platform administration">
+    <title>Admin dashboard · SL Bus.lk</title>
+    <link rel="stylesheet" href="/admin.css">
+  </head>
+  <body>
+    <div class="admin-shell">
+      <header class="admin-topbar">
+        <a class="brand" href="/" aria-label="SL Bus.lk home">
+          <span class="brand-mark" aria-hidden="true">B</span>
+          <span>bus<span class="brand-accent">.lk</span></span>
+        </a>
+        <div class="topbar-actions">
+          <a class="back-link" href="/">← Back to live map</a>
+          <span id="admin-name" class="admin-name"></span>
+          <button id="sign-out" class="button button-light" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <section class="welcome">
+          <div>
+            <p class="eyebrow">PLATFORM CONTROL</p>
+            <h1>Admin dashboard</h1>
+            <p class="welcome-copy">Review stakeholder access and keep the pilot network organized.</p>
+          </div>
+          <span class="admin-badge"><i></i>Administrator</span>
+        </section>
+
+        <section class="metric-grid" aria-label="Network summary">
+          <article class="metric-card"><span class="metric-icon green">♙</span><div><p>Total accounts</p><strong id="metric-users">—</strong><small>All account roles</small></div></article>
+          <article class="metric-card"><span class="metric-icon amber">◷</span><div><p>Awaiting review</p><strong id="metric-pending">—</strong><small>Operator and authority requests</small></div></article>
+          <article class="metric-card"><span class="metric-icon blue">▣</span><div><p>Registered buses</p><strong id="metric-vehicles">—</strong><small>Across operator fleets</small></div></article>
+          <article class="metric-card"><span class="metric-icon mint">⌖</span><div><p>Sharing now</p><strong id="metric-live">—</strong><small>Recent driver GPS updates</small></div></article>
+        </section>
+
+        <section class="workspace-card">
+          <nav class="section-tabs" aria-label="Admin dashboard sections">
+            <button class="tab-button active" type="button" data-section="approvals" aria-current="page">Approvals <span id="approval-count" class="tab-count">0</span></button>
+            <button class="tab-button" type="button" data-section="accounts">All accounts</button>
+            <button class="tab-button" type="button" data-section="fleet">Bus fleet</button>
+            <button class="tab-button" type="button" data-section="account">Admin account</button>
+          </nav>
+
+          <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+          <section class="dashboard-section active" id="section-approvals" aria-labelledby="approvals-heading">
+            <div class="section-heading">
+              <div><h2 id="approvals-heading">Stakeholder approvals</h2><p>Verify operator and transport-authority requests before granting access.</p></div>
+              <button class="button button-light refresh-button" type="button" data-refresh>↻ Refresh</button>
+            </div>
+            <div id="approval-list" class="record-list"></div>
+          </section>
+
+          <section class="dashboard-section" id="section-accounts" aria-labelledby="accounts-heading" hidden>
+            <div class="section-heading">
+              <div><h2 id="accounts-heading">All accounts</h2><p>Review account roles and access status.</p></div>
+              <label class="search-box"><span aria-hidden="true">⌕</span><input id="account-search" type="search" placeholder="Search name or email" aria-label="Search accounts"></label>
+            </div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Name</th><th>Role</th><th>Organization</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="account-rows"></tbody></table>
+            </div>
+            <p id="account-empty" class="empty-state" hidden>No accounts match your search.</p>
+          </section>
+
+          <section class="dashboard-section" id="section-fleet" aria-labelledby="fleet-heading" hidden>
+            <div class="section-heading">
+              <div><h2 id="fleet-heading">Registered bus fleet</h2><p>See which operator owns each bus and whether a driver is assigned.</p></div>
+              <button class="button button-light refresh-button" type="button" data-refresh>↻ Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Vehicle ID</th><th>Route</th><th>Operator</th><th>Operator status</th><th>Assigned driver</th></tr></thead><tbody id="fleet-rows"></tbody></table>
+            </div>
+            <p id="fleet-empty" class="empty-state" hidden>No vehicles have been registered yet.</p>
+          </section>
+
+          <section class="dashboard-section" id="section-account" aria-labelledby="account-heading" hidden>
+            <div class="section-heading">
+              <div><h2 id="account-heading">Admin account</h2><p>Change the email address you use to sign in.</p></div>
+            </div>
+            <div class="account-settings">
+              <p>Current email: <strong id="current-admin-email"></strong></p>
+              <p class="account-settings-note">Enter an email address you control and confirm with your current password. Email verification is not enabled in this prototype.</p>
+              <form id="admin-email-form" class="admin-email-form">
+                <label for="new-admin-email">New email address</label>
+                <input id="new-admin-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+                <label for="admin-current-password">Current password</label>
+                <input id="admin-current-password" name="password" type="password" autocomplete="current-password" required>
+                <button class="button button-approve" type="submit">Update admin email</button>
+              </form>
+            </div>
+          </section>
+        </section>
+        <p class="dashboard-footnote">Location tracking is opt-in. This dashboard shows current pilot records; the Colombo demo route is illustrative, not verified.</p>
+      </main>
+    </div>
+    <script src="/admin.js"></script>
+  </body>
+</html>
