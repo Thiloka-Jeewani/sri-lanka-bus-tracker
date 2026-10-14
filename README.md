@@ -1,81 +1,96 @@
-# Bus.lk — Sri Lanka bus tracker MVP
+# Bus.lk — Sri Lanka bus tracker
 
-A small, community-first prototype for sharing bus positions. It includes a passenger map, role-based accounts for passengers, drivers, bus operators, transport authorities, and platform administrators, a SQLite-backed location API, and live map updates with Server-Sent Events.
+A community bus-tracking pilot with a **React + TypeScript frontend** and a separate **FastAPI backend**. The backend provides validated JSON APIs, role-based access, SQLite persistence, and live location updates over Server-Sent Events.
 
-**This is a prototype, not an official or production-ready Sri Lankan transit service.** The only route is a short Colombo Fort–Pettah demo corridor. Its route line connects two illustrative stops; it is not a surveyed road route or an official bus service. Locations come only from people who choose to share them, are marked as demo data, and do not currently verify that a device is on a bus.
+> **Prototype, not a production transit service.** The Colombo Fort–Pettah route is illustrative, not surveyed or official. Real service data and locations are not independently verified. Do not use this prototype to make safety-critical travel decisions or expose it publicly with real location data before the production safeguards below are addressed.
+
+## Project layout
+
+- `frontend/` — Vite, React, TypeScript, and Leaflet web client.
+- `backend/app/main.py` — FastAPI API and production static-build serving.
+- `backend/requirements.txt` — Python runtime dependencies.
+- `backend/tests/` — API workflow tests.
+- `data/buses.sqlite3` — local SQLite database, created on first run.
 
 ## Run locally
 
-Requirements: Python 3.10 or later; no package installation required.
+Requires Python 3.10+ and Node.js 20+.
 
-### Set up the first administrator
-
-On a fresh database, simply start the server:
+Install dependencies:
 
 ```powershell
-python server.py
+python -m pip install -r backend\requirements-dev.txt
+Set-Location frontend
+npm ci
 ```
 
-Open <http://127.0.0.1:8000>. The first run creates `data/buses.sqlite3`. Set `BUS_TRACKER_DB` to choose another database file; `BUS_TRACKER_HOST` and `BUS_TRACKER_PORT` configure the listen address and port. Keep the default host on your own computer for development. Set `BUS_TRACKER_COOKIE_SECURE=1` when deployed behind HTTPS.
-
-The Accounts panel shows **Set up the first administrator** until an admin exists. Fill in your name, the one admin email you will use to sign in, and a unique password of at least 16 characters. Creating the account signs you in and opens the admin dashboard. First-time setup is limited to requests from this computer and protected by a database transaction; it automatically closes once the first admin exists. Save the password safely. Admin self-registration is not offered after setup.
-
-The optional `BUS_TRACKER_ADMIN_EMAIL` and `BUS_TRACKER_ADMIN_PASSWORD` environment variables can still provision an initial admin for automated deployments; they are not required for local setup.
-
-If the server reports `sqlite3.OperationalError: unable to open database file`, stop it with Ctrl+C and restart it from the project folder. The server recreates a missing `data` directory and database schema, but a deleted database cannot restore its previous accounts, fleet assignments, or locations; restore a backup if you have one. If the first-admin setup appears again, the current database has no administrator account.
-
-### Account and role workflow
-
-- Passengers and drivers can register and sign in. Passwords are stored as salted PBKDF2-HMAC-SHA256 hashes; sessions use random, server-side, expiring tokens in HttpOnly, SameSite cookies. Mutating authenticated requests require a session CSRF token.
-- Bus operators and transport authorities provide an organization/agency name. Their accounts stay pending and cannot sign in until an admin approves them. Rejected/suspended accounts cannot use an existing session.
-- The admin reviews pending operator/authority accounts in the account panel. The initial admin is created once through the local first-run setup screen; admin accounts cannot be publicly registered.
-- Admins can open the separate `/admin` dashboard from the main Accounts panel. It provides network summary cards, stakeholder approvals, searchable accounts with suspend/reactivate controls, and a cross-operator fleet table. Admin data/actions are protected by role checks; other roles are redirected from the dashboard.
-- The dashboard's **Admin account** tab lets the signed-in administrator change their sign-in email after confirming the current password. The new email must be unique; other active sessions for that admin are signed out. This prototype does not verify email ownership, so use an address you control.
-- An approved operator can register vehicles and assign each vehicle to a driver's registered email. A driver can share GPS only after signing in and receiving a registered vehicle assignment. Vehicle ID and route are derived on the server from that assignment; drivers cannot claim another bus by changing the browser request.
-- Passengers browse the map without signing in. Authorities have a read-only view of the route and public live map. This MVP does not yet provide an authority data-submission or route-verification workflow.
-- Driver sharing requires a secure browser context: localhost works for development; a deployed site must use HTTPS. Sign in as an assigned driver, grant location permission, and press **Start sharing location**. Keep the page open while sharing. Press **Stop sharing location** when finished.
-
-Run the focused tests with:
+Run the backend and frontend in separate terminals from the project root:
 
 ```powershell
-python -m unittest discover -s tests -v
+python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+```powershell
+Set-Location frontend
+npm run dev
+```
+
+Open <http://127.0.0.1:5173>. Vite proxies `/api` requests to FastAPI. To run a production-style single server, build the frontend and start the API:
+
+```powershell
+Set-Location frontend
+npm run build
+Set-Location ..
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+
+The built React application is then served by FastAPI at <http://127.0.0.1:8000>.
+
+Set `BUS_TRACKER_DB` to choose a database file; `BUS_TRACKER_HOST` and `BUS_TRACKER_PORT` configure the server entry point. Keep the default listen address on your own computer for development. Set `BUS_TRACKER_COOKIE_SECURE=1` behind HTTPS. For automated initial setup, set both `BUS_TRACKER_ADMIN_EMAIL` and `BUS_TRACKER_ADMIN_PASSWORD` (16–128 characters); optionally set `BUS_TRACKER_ADMIN_NAME`. Never commit these secrets. Otherwise, the first administrator can be created once from the local setup form; this setup is restricted to loopback requests.
+
+The frontend uses OpenStreetMap tiles and Leaflet from npm. Map tiles still require network access; review provider terms and privacy implications before launch.
+
+## Account, access, and operator workflows
+
+- Passengers and drivers register with a valid email, a 12–128 character password, and affirmative consent. Passwords are stored as salted PBKDF2-HMAC-SHA256 hashes.
+- Operator and transport-authority signups require an organization and remain pending until an administrator approves them. Admin accounts cannot be publicly registered.
+- Sessions use random server-side tokens in HttpOnly, SameSite cookies; mutating authenticated requests require a CSRF token. Login attempts are throttled in-process. Set secure cookies only when serving over HTTPS.
+- Administrators can review pending stakeholder signups, reject/suspend/reactivate approved stakeholders, search accounts, inspect fleet/network summaries, and update their email after confirming the current password. Changing the admin email revokes the admin's other sessions.
+- Approved operators register buses on configured routes and assign active driver accounts by email. Drivers can submit GPS only after an operator assigns them a registered vehicle; the server derives vehicle and route identity from that assignment.
+- Passengers and authorities can view public live positions. Drivers start sharing explicitly from a secure browser context (HTTPS or localhost). **Stop sharing** deletes the currently published position; signing out also clears it. Closing the page attempts the same cleanup while stopping browser GPS updates.
+- Coordinates are checked for finite values and Sri Lanka bounds, GPS accuracy is range-checked, vehicle IDs and route IDs are validated, and role/ownership checks are enforced by the API.
 
 ## API
 
-- `GET /api/routes` — available routes and stops.
-- `GET /api/vehicles` — last known vehicle positions and freshness status.
-- `GET /api/stream` — Server-Sent Events containing updated vehicle snapshots.
-- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` — accounts and sessions.
-- `GET /api/admin/users`, `POST /api/admin/users/{id}/status` — admin-only stakeholder review.
-- `GET /api/admin/summary`, `GET /api/admin/fleet` — admin dashboard overview and fleet data.
-- `POST /api/admin/account/email` — change the signed-in admin's email after current-password confirmation.
-- `GET /api/operator/fleet`, `POST /api/operator/fleet`, `POST /api/operator/fleet/{vehicleId}/assign` — approved operator fleet management.
-- `GET /api/driver/vehicle` — vehicle assigned to the signed-in driver.
-- `POST /api/locations` — authenticated driver location update. JSON body includes `lat`, `lon`, and optional `accuracy`; vehicle and route come from the driver's server-side fleet assignment.
+- `GET /api/routes`, `GET /api/vehicles`, `GET /api/stream`
+- `GET /api/auth/me`, `GET /api/auth/setup-status`
+- `POST /api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/setup-admin`
+- `GET /api/driver/vehicle`, `POST /api/locations`, `POST /api/driver/location/stop`
+- `GET /api/operator/fleet`, `POST /api/operator/fleet`, `POST /api/operator/fleet/{vehicleId}/assign`
+- `GET /api/admin/users`, `/api/admin/summary`, `/api/admin/fleet`
+- `POST /api/admin/users/{id}/status`, `/api/admin/account/email`
 
-Positions older than 90 seconds are shown as **Last seen**, not live. Locations are saved in SQLite and remain there after the server stops; this prototype has no retention/expiry job.
+Invalid request models return FastAPI validation errors. Authenticated writes require `X-CSRF-Token`; browser writes with a cross-origin `Origin` are rejected.
 
-## Before a real public launch
+## Tests
 
-This MVP demonstrates the technical flow; it cannot create verified route or vehicle data on its own. Plan a small, human-led pilot before expanding:
+```powershell
+python -m unittest discover -s tests -v
+python -m unittest discover -s backend\tests -v
+Set-Location frontend
+npm run build
+```
 
-1. **Find a local pilot partner.** Talk with a bus owner/association, depot manager, and a few drivers about a single route. Explain the benefit, who can see the locations, expected phone/battery/data use, and that sharing is voluntary. Agree who handles questions and removal requests.
-2. **Survey and verify the route.** Ride it with a local person. Record the actual direction, stop names and coordinates, route/permit identifiers where appropriate, and variations by time/day. Ask the operator to verify every published route. Replace the illustrative geometry before advertising any ETA.
-3. **Recruit participating drivers.** Obtain informed, written participation consent and confirm the vehicle ID and route. Test on the driver's own phone, in sunlight, with patchy mobile data; agree how to pause tracking at terminals, breaks, or after a shift.
-4. **Verify accounts and add production safeguards before internet exposure.** This prototype has role checks, operator assignment, and a per-process sign-in throttle for its demo workflow, but not email verification, password recovery, MFA, distributed rate controls, audit logging, or an enterprise identity provider. Use HTTPS, distributed rate limits, monitoring, backups, stronger account recovery, and a security review. Do not expose this development server directly to the public internet.
-5. **Set privacy and operating policies.** Consult Sri Lankan legal/privacy professionals about applicable requirements before collecting real people's location data. Document purpose, consent, visibility, retention/deletion, contact details, incident response, and how drivers can stop/delete sharing. Minimize retained location data; the current app stores only each vehicle's latest fix but has no automatic expiry.
-6. **Test with riders and accessibility in all three languages.** Ask Sinhala-, Tamil-, and English-speaking people to test route names, stop spelling, map usability, low-end Android phones, screen readers, and low-bandwidth conditions. The current interface has translated labels, but demo route/stop content needs review by fluent local speakers.
-7. **Add realistic arrival information only after gathering evidence.** For predictions, collect operator-verified route shapes, stop sequences, and consented timestamped trips; measure GPS quality and traffic variance. Compare estimated arrivals against observed arrivals before publishing them, and label uncertainty clearly. Never present a demo estimate as an official schedule.
-8. **Pilot, measure, iterate.** Start with one operator and one corridor. Track location freshness, opt-outs, position accuracy, rider-reported usefulness, data costs, and support issues. Fix reliability and consent problems before adding routes or operators.
+CI runs the legacy regression tests, new FastAPI workflow tests, and a TypeScript production build.
 
-### Production engineering still needed
+## Before real public use
 
-Move from the single-process, SQLite prototype to a supported deployment architecture before a multi-operator launch: durable scalable storage, HTTPS hosting with secure cookies, verified operator/driver onboarding, automated backups, retention/deletion controls, operational monitoring, and recovery procedures. Add email verification, account recovery, MFA for privileged roles, rate limiting, audit logging, and formal privacy/consent terms; test reconnects, stale GPS, duplicate vehicle IDs, and weak connectivity. Map tiles and fonts are served by third parties; check their terms, availability, and privacy implications, or choose a suitable local/managed map provider.
+The framework migration does not make this pilot production-ready. Before collecting real users' locations:
 
-## Data and privacy notes
+1. Verify route shapes, stops, schedules, permits, and participating vehicles with a local operator; replace the illustrative route and clearly label any unverified data.
+2. Establish consent, access, retention/deletion, support, incident-response, and location-visibility policies, with local legal/privacy review.
+3. Deploy behind HTTPS with secure cookies, persistent/managed storage and tested backups. SQLite and the in-process login throttle are for a small single-instance pilot, not a multi-instance service.
+4. Add verified email onboarding, account recovery, MFA for privileged roles, shared rate limiting, audit logging, monitoring, and operational recovery procedures.
+5. Test with Sinhala-, Tamil-, and English-speaking riders and drivers, assistive technologies, weak networks, and low-end phones.
 
-- Driver location is requested only after a driver presses **Start sharing location**; this app does not request passenger location.
-- Stop sharing or close the page to stop browser updates. This prototype does not offer background tracking.
-- The browser sends the latest GPS fix at most once every four seconds. Vehicle positions are visible to anyone who can reach the app and are retained in the local SQLite file until manually deleted.
-- Keep this prototype on localhost. It is not suitable for collecting real public GPS data until authentication, operating policy, deployment controls, and local legal review are complete.
+The service currently stores only each vehicle's latest fix, but does not have an automatic retention/expiry job. Explicitly stopping or ending a driver session removes the public latest fix; inactive location rows otherwise remain stored until a later driver update or operator/admin action. Locations are visible to anyone who can reach the app. Do not collect real location data until a retention and deployment policy is in place.

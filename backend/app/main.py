@@ -11,6 +11,7 @@ import secrets
 import sqlite3
 import time
 import uuid
+import asyncio
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -441,7 +442,7 @@ async def stream_vehicles():
                 previous = snapshot
             else:
                 yield ": keep-alive\n\n"
-            await __import__("asyncio").sleep(5)
+            await asyncio.sleep(5)
 
     return StreamingResponse(
         events(),
@@ -826,6 +827,8 @@ if _frontend_dist.is_dir():
 
 @app.get("/{path:path}", include_in_schema=False)
 def serve_frontend(path: str):
+    if path == "api" or path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API endpoint not found.")
     if _frontend_dist.is_dir() and (_frontend_dist / "index.html").is_file():
         return FileResponse(_frontend_dist / "index.html")
     raise HTTPException(status_code=404, detail="Frontend build not found. Run npm run build in the frontend directory.")
